@@ -21,6 +21,7 @@ import {
 import {Persona} from '../models';
 import {PersonaRepository} from '../repositories';
 import { AutenticacionService } from '../services';
+const fetch = require('node-fetch')
 
 export class PersonaController {
   constructor(
@@ -52,7 +53,21 @@ export class PersonaController {
 
     let clave = this.servicioAutenticacion.GenerarClave()
     let claveCifrada = this.servicioAutenticacion.CifrarClave(clave)
+    persona.clave = claveCifrada
     let p= await this.personaRepository.create(persona);
+
+    //variable para la notificacion por correo
+    let destino = persona.correo
+    let asunto = 'registro en plataforma'
+    let contenido = `holla ${persona.nombre}, su nombre de usuario es: ${persona.correo} y su contraaseña es: ${clave}`
+
+    //consulta a la url que gestiona el codigo python
+    fetch(`http://127.0.0.1:5000/ccorreo?correoDestino=${destino}&asunto=${asunto}&sms=${contenido}`)
+    .then((data:any)=>{
+      console.log(data)
+    })
+
+    return p
   }
 
   @get('/personas/count')
