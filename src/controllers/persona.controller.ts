@@ -17,10 +17,12 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
-import {Persona} from '../models';
+import {Credenciales, Persona} from '../models';
 import {PersonaRepository} from '../repositories';
 import { AutenticacionService } from '../services';
+import { Llaves } from '../config/llaves';
 const fetch = require('node-fetch')
 
 export class PersonaController {
@@ -31,6 +33,34 @@ export class PersonaController {
     @service(AutenticacionService)
     public servicioAutenticacion: AutenticacionService
   ) {}
+
+  @post('/identificarPersona',{
+    responses:{
+      '200':{
+        descripcion: 'identificacion del usuario'
+      }
+    }
+  })
+  async identificarPersona(
+    @requestBody() credenciales: Credenciales
+  ){
+    let p = await this.servicioAutenticacion.IdentificarPersona(credenciales.usuario, credenciales.clave)
+    if(p){
+      let token = this.servicioAutenticacion.GeneraraTokenJWT(p)
+
+      return{
+        datos:{
+          nombre: p.nombre,
+          correo: p.correo,
+          id: p.id
+        },
+        tk: token
+      }
+    }else{
+      throw new HttpErrors[401]('datos no validos')
+    }
+
+  }
 
   @post('/personas')
   @response(200, {
@@ -62,7 +92,7 @@ export class PersonaController {
     let contenido = `holla ${persona.nombre}, su nombre de usuario es: ${persona.correo} y su contraaseña es: ${clave}`
 
     //consulta a la url que gestiona el codigo python
-    fetch(`http://127.0.0.1:5000/ccorreo?correoDestino=${destino}&asunto=${asunto}&sms=${contenido}`)
+    fetch(`${Llaves.urlNotificar}/ccorreo?correoDestino=${destino}&asunto=${asunto}&sms=${contenido}`)
     .then((data:any)=>{
       console.log(data)
     })
